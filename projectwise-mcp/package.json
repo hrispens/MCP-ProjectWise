@@ -6,6 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
+    "test": "npm run build && node --test test/projectwise-client.test.mjs",
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
     "watch": "tsc --watch",

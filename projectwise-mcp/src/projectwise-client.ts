@@ -11,7 +11,14 @@ export class ProjectWiseClient {
 
   constructor(config: ProjectWiseConfig) {
     this.config = config;
+    this.validateGuid(config.repositoryId, 'repository ID');
     this.repoPath = `/Repositories/${config.repositoryId}`;
+  }
+
+  private validateGuid(value: string, label: string): void {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+      throw new Error(`Invalid ProjectWise ${label}: expected a GUID`);
+    }
   }
 
   /**
@@ -35,6 +42,15 @@ export class ProjectWiseClient {
    */
   private buildUrl(endpoint: string, queryParams?: Record<string, string>): string {
     const url = new URL(endpoint, this.config.baseUrl);
+    const base = new URL(this.config.baseUrl);
+    const repositoryPrefix = `${this.repoPath}/`;
+    if (
+      url.origin !== base.origin ||
+      (url.pathname !== this.repoPath && !url.pathname.startsWith(repositoryPrefix))
+    ) {
+      throw new Error('Refusing WSG request outside the configured repository');
+    }
+
     if (queryParams) {
       Object.entries(queryParams).forEach(([key, value]) => {
         url.searchParams.append(key, value);
@@ -86,7 +102,8 @@ export class ProjectWiseClient {
   async listFolders(parentId?: string): Promise<unknown> {
     const endpoint = `${this.repoPath}/PW_WSG/Project`;
     const filters = ["TypeString eq 'Folder'"];
-    if (parentId) {
+    if (parentId !== undefined) {
+      this.validateGuid(parentId, 'folder ID');
       filters.push(`ParentGuid eq '${parentId}'`);
     } else {
       filters.push('ParentGuid eq null');
@@ -98,6 +115,7 @@ export class ProjectWiseClient {
    * List documents in a folder
    */
   async listDocuments(folderId: string): Promise<unknown> {
+    this.validateGuid(folderId, 'folder ID');
     const endpoint = `${this.repoPath}/PW_WSG/Document`;
     return this.get(endpoint, { '$filter': `ParentGuid eq '${folderId}'` });
   }
@@ -106,6 +124,7 @@ export class ProjectWiseClient {
    * Get document metadata by ID
    */
   async getDocument(documentId: string): Promise<unknown> {
+    this.validateGuid(documentId, 'document ID');
     const endpoint = `${this.repoPath}/PW_WSG/Document/${documentId}`;
     return this.get(endpoint);
   }
@@ -116,7 +135,7 @@ export class ProjectWiseClient {
   async searchDocuments(namePattern: string, maxResults: number = 50): Promise<unknown> {
     const endpoint = `${this.repoPath}/PW_WSG/Document`;
     return this.get(endpoint, {
-      '$filter': `contains(Name,'${namePattern}')`,
+      '$filter': `contains(Name,'${namePattern.replace(/'/g, "''")}')`,
       '$top': maxResults.toString(),
     });
   }
@@ -125,6 +144,7 @@ export class ProjectWiseClient {
    * Get folder by ID
    */
   async getFolder(folderId: string): Promise<unknown> {
+    this.validateGuid(folderId, 'folder ID');
     const endpoint = `${this.repoPath}/PW_WSG/Project/${folderId}`;
     return this.get(endpoint);
   }

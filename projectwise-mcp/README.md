@@ -92,7 +92,15 @@ Authentication is **token-only** (Bearer token from Bentley IMS). A helper scrip
 npm run token:playwright
 ```
 
-Populate `PW_TOKEN` in `.env` with the retrieved value. Basic auth is not supported.
+Basic auth is not supported. The VS Code profile configuration can prompt for the token without saving it in `mcp.json`.
+The optional Playwright helper writes the captured token to `login/token.json`; avoid running it unless you specifically need that file.
+
+## Security notes
+
+- Folder, document, and repository IDs must be GUIDs. Requests are restricted to the configured repository.
+- Search text is escaped before it is added to the WSG filter.
+- ProjectWise results may contain user-authored text. The server labels results as untrusted, but this cannot eliminate prompt-injection risk. Use a narrowly scoped ProjectWise account and review consequential agent actions.
+- Do not run the Playwright token helper unless you explicitly want it to write the captured token to `login/token.json`.
 
 ## Development
 
